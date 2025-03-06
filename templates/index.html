@@ -1,77 +1,175 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Ollama Chat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OllamaChat</title>
+    <link rel="icon" href="https://i.postimg.cc/Y92j2b0C/6bd08d0af44a5eff0bf3c2de130be576.png" type="image/png">
     <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-image: url('https://i.postimg.cc/h47SH4Rv/image.png');
+            background-size: cover;
+            background-position: center;
+            color: #fff;
+            transition: background-color 0.3s, color 0.3s;
+        }
         #chat-container {
-            width: 80%;
+            width: 60%;
             margin: 20px auto;
-            border: 1px solid #ccc;
-            padding: 10px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.3s;
         }
         #chat-log {
-            height: 300px;
-            overflow-y: scroll;
+            flex-grow: 1;
+            overflow-y: auto;
             margin-bottom: 10px;
             padding: 5px;
             border: 1px solid #eee;
+            background-color: rgba(3, 82, 45, 0.1);
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         #user-input {
-            width: 70%;
+            flex-grow: 1;
             padding: 8px;
+            border-radius: 5px;
+            border: none;
         }
-        #send-button {
+        #send-button, #file-button, #clearChat, #theme-toggle {
             padding: 8px 12px;
             cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+        }
+        #emoji-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
         }
     </style>
 </head>
 <body>
-    <div id="chat-container">
-        <h1>Ollama Chat</h1>
-        <div id="chat-log"></div>
-        <div>
-            <input type="text" id="user-input" placeholder="Type your message...">
-            <button id="send-button">Send</button>
+    <div id="chat-container"> <h1>Тур. агент Саях
+
+    </h1> 
+    <div id="chat-log"></div> 
+    <div id="input-container"> 
+        <button id="theme-toggle">Сменить тему</button>
+        <input type="text" id="user-input" placeholder="Введите ваше сообщение..."> 
+        <div id="emoji-buttons"> 
+            <button class="emoji-button" data-emoji="😊">😊</button> 
+            <button class="emoji-button" data-emoji="😢">😢</button> 
+            <button class="emoji-button" data-emoji="😍">😍</button> 
+            <button class="emoji-button" data-emoji="😂">😂</button> 
+            <button class="emoji-button" data-emoji="👍">👍</button> 
+        </div> <button id="send-button">Отправить</button> 
+        <input type="file" id="file-input">
+        <button id="file-button">Файл</button> 
+        <button id="clearChat">Очистить чат</button> 
         </div>
     </div>
-
     <script>
         const chatLog = document.getElementById("chat-log");
         const userInput = document.getElementById("user-input");
         const sendButton = document.getElementById("send-button");
+        const emojiButtons = document.querySelectorAll(".emoji-button");
+        const fileInput = document.getElementById("file-input");
+        const fileButton = document.getElementById("file-button");
+        const clearChatButton = document.getElementById("clearChat");
+        const themeToggleButton = document.getElementById("theme-toggle");
+
+        let currentTheme = 'blue'; // Синий по умолчанию
+
+        // Функция для смены темы
+        function toggleTheme() {
+    if (currentTheme === 'blue') {
+        document.body.style.backgroundImage = "url('https://i.postimg.cc/XJ5938B2/image.png')";
+        document.body.style.color = "#fff"; // Цвет текста для светлой темы
+        chatLog.style.backgroundColor = "rgba(0, 162, 255, 0.1)"; // Светло-синий для логов
+        currentTheme = 'pink'; // Меняем текущую тему на розовую
+    } else if (currentTheme === 'pink') {
+        document.body.style.backgroundImage = "url('https://i.postimg.cc/KY6g9Mpt/image.png')";
+        document.body.style.color = "#fff"; // Цвет текста для темной темы
+        chatLog.style.backgroundColor = "rgba(96, 8, 110, 0.1)"; // Светло-зеленый для логов
+        currentTheme = 'green'; // Меняем текущую тему на зеленую
+    } else {
+        document.body.style.backgroundImage = "url('https://i.postimg.cc/h47SH4Rv/image.png')"; // Замените на URL вашей зеленой темы
+        document.body.style.color = "#fff"; // Цвет текста для зеленой темы
+        chatLog.style.backgroundColor = "rgba(0, 255, 0, 0.1)"; // Светло-зеленый для логов
+        currentTheme = 'blue'; // Меняем текущую тему на синюю
+    }
+}
+
+
+        // Загружаем сохраненные сообщения из localStorage при загрузке страницы
+        window.onload = function() {
+            const savedMessages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+            savedMessages.forEach(message => appendMessage(message));
+        };
 
         sendButton.addEventListener("click", sendMessage);
-
         userInput.addEventListener("keydown", function(event) {
             if (event.key === "Enter") {
                 sendMessage();
             }
         });
 
-        function sendMessage() {
-            const message = userInput.value.trim();
-            if (message) {
-                appendMessage("You: " + message);
-                userInput.value = "";
+        emojiButtons.forEach(button => {
+            button.addEventListener("click", function() {
+                const emoji = button.getAttribute("data-emoji");
+                userInput.value += emoji;
+            });
+        });
 
-                fetch("/api/chat", {
+        fileButton.addEventListener("click", function() {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener("change", function() {
+            const file = fileInput.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                fetch("/api/upload", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ message: message })
-                })
-                .then(response => response.json())
+                    body: formData
+                }).then(response => response.json())
                 .then(data => {
-                    appendMessage("Ollama: " + data.response);
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                    appendMessage("Error: Could not get response.");
+                    appendMessage("Вы: " + data.fileUrl);
+                }).catch(error => {
+                    console.error("Ошибка:", error);
+                    appendMessage("Ошибка: Не удалось отправить файл.");
                 });
             }
-        }
+        });
+
+        clearChatButton.addEventListener("click", function() {
+            chatLog.innerHTML = "";
+            localStorage.removeItem("chatMessages");
+            appendMessage("Ollama: История чата очищена.");
+        });
+
+        themeToggleButton.addEventListener("click", toggleTheme);
 
         function appendMessage(message) {
             const messageElement = document.createElement("p");
@@ -79,6 +177,63 @@
             chatLog.appendChild(messageElement);
             chatLog.scrollTop = chatLog.scrollHeight; // Автопрокрутка
         }
+
+        function saveMessage(message) {
+            const savedMessages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+            savedMessages.push(message);
+            localStorage.setItem("chatMessages", JSON.stringify(savedMessages));
+        }
+
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (message) {
+                appendMessage("Вы: " + message);
+                saveMessage("Вы: " + message); // Сохраняем сообщение
+                userInput.value = "";
+                processMessage(message);
+            }
+        }
+
+        function processMessage(message) {
+            // Проверка на команды запоминания
+            const rememberMatch = message.match(/запомни (\w+)/);
+            if (rememberMatch) {
+                const itemToRemember = rememberMatch[1];
+                memory[itemToRemember] = itemToRemember; // Запоминаем значение
+                appendMessage("Ollama: Я запомнила " + itemToRemember + ".");
+                saveMessage("Ollama: Я запомнила " + itemToRemember + "."); // Сохраняем ответ
+                return;
+            }
+
+            // Проверка на запрос о запомненной информации
+            const recallMatch = message.match(/что такое (\w+)/);
+            if (recallMatch) {
+                const itemToRecall = recallMatch[1];
+                if (memory[itemToRecall]) {
+                    appendMessage("Ollama: " + memory[itemToRecall]);
+                    saveMessage("Ollama: " + memory[itemToRecall]); // Сохраняем ответ
+                } else {
+                    appendMessage("Ollama: Я не помню, что такое " + itemToRecall + ".");
+                    saveMessage("Ollama: Я не помню, что такое " + itemToRecall + "."); // Сохраняем ответ
+                }
+                return;
+            }
+
+            // Логика для общения с Олламой
+            fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: message })
+            }).then(response => response.json())
+            .then(data => {
+                appendMessage("Ollama: " + data.response);
+                saveMessage("Ollama: " + data.response); // Сохраняем ответ
+            }).catch(error => {
+                console.error("Ошибка:", error);
+                appendMessage("Ollama: Произошла ошибка при обработке вашего сообщения.");
+            });
+        }
     </script>
 </body>
 </html>
+
